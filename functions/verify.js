@@ -29,7 +29,7 @@ export async function onRequest(context) {
     });
   }
 
-  // 清理 PEM 字符串，防止环境变量里的换行符丢失导致解析失败
+  // 关键：将转义的 \n 还原为真实的换行符
   const cleanKey = rawPrivateKey
     .replace(/\\n/g, '\n') // 处理转义的换行符
     .replace(/\r/g, '')    // 去掉 Windows 换行符
@@ -50,7 +50,6 @@ export async function onRequest(context) {
     nonce
   });
 
-  // ⚠️ 注意这里改成了 "sec1"，因为你发来的私钥是这个格式
   const key = await crypto.subtle.importKey(
     "sec1",
     binaryDer.buffer,
