@@ -48,7 +48,7 @@ export async function onRequest(context) {
   });
 
   const key = await crypto.subtle.importKey(
-    "sec1",
+    "pkcs8",
     binaryDer.buffer,
     { name: "ECDSA", namedCurve: "P-256" },
     false,
