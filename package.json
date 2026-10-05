@@ -1,0 +1,11 @@
+﻿{
+  "name": "activation-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo \"No build required\""
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
