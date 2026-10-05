@@ -1,7 +1,6 @@
-// functions/verify.js
 export async function onRequest(context) {
   const { request, env } = context;
-  
+
   if (request.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 });
   }
@@ -22,15 +21,26 @@ export async function onRequest(context) {
   if (expiresAt && expiresAt <= Date.now()) ok = false;
 
   // 从环境变量获取私钥
-  const privateKey = env.PRIVATE_KEY;
-  if (!privateKey) {
+  const rawPrivateKey = env.PRIVATE_KEY;
+  if (!rawPrivateKey) {
     return new Response(JSON.stringify({ error: 'Private key not configured' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
   }
 
-  // 使用 Web Crypto API 签名（无服务器环境不支持 node:crypto 的 sign）
+  // 清理 PEM 字符串，防止环境变量里的换行符丢失导致解析失败
+  const cleanKey = rawPrivateKey
+    .replace(/\\n/g, '\n') // 处理转义的换行符
+    .replace(/\r/g, '')    // 去掉 Windows 换行符
+    .trim();
+
+  const pemHeader = "-----BEGIN EC PRIVATE KEY-----";
+  const pemFooter = "-----END EC PRIVATE KEY-----";
+  const pemContents = cleanKey.substring(pemHeader.length, cleanKey.length - pemFooter.length).replace(/\s/g, '');
+
+  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+
   const crypto = globalThis.crypto;
   const encoder = new TextEncoder();
   const payload = JSON.stringify({
@@ -40,14 +50,9 @@ export async function onRequest(context) {
     nonce
   });
 
-  // 将 PEM 私钥转换为 CryptoKey
-  const pemHeader = "-----BEGIN EC PRIVATE KEY-----";
-  const pemFooter = "-----END EC PRIVATE KEY-----";
-  const pemContents = privateKey.substring(pemHeader.length, privateKey.length - pemFooter.length);
-  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
-
+  // ⚠️ 注意这里改成了 "sec1"，因为你发来的私钥是这个格式
   const key = await crypto.subtle.importKey(
-    "pkcs8",
+    "sec1",
     binaryDer.buffer,
     { name: "ECDSA", namedCurve: "P-256" },
     false,
@@ -60,7 +65,6 @@ export async function onRequest(context) {
     encoder.encode(payload)
   );
 
-  // 将签名转为 Base64
   const sigBase64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
 
   return new Response(JSON.stringify({
