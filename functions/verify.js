@@ -47,7 +47,7 @@ export async function onRequest(context) {
 
   // 尝试使用 pkcs8 导入（如果报错，请改为 sec1 重新部署）
   const key = await crypto.subtle.importKey(
-    "sec1", 
+    "pkcs 8", 
     binaryDer.buffer,
     { name: "ECDSA", namedCurve: "P-256" },
     false,
